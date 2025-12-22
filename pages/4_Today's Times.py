@@ -18,9 +18,6 @@ df, fig = today_times(df)
 # Selects users to display
 df = user_multi_select_all_users(df)
 
-# Sets title
-st.title('Today\'s Times')
-
 # Display plot
 st.pyplot(fig)
 

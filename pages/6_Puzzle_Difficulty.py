@@ -31,9 +31,6 @@ else:
     ascending = False
     df, fig = puzzle_difficulty(df, ascending, number_of_rows)
 
-# Sets title
-st.title(str(number_of_rows) + ' ' + difficulty + ' Puzzles')
-
 # Display plot
 st.pyplot(fig)
 

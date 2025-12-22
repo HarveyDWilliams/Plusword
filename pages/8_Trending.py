@@ -79,9 +79,6 @@ else:
     df, fig = rolling_average(df, window_days)
     chart_type = str(window_days) + ' Day ' + chart_type
 
-# Sets title
-st.title(chart_type)
-
 # Display plot
 st.pyplot(fig)
 

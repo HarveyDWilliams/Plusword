@@ -39,8 +39,5 @@ else:
     df = user_multi_select_non_mums(df)
     fig = sub_time_boxplot(df)
 
-# Sets title
-st.title('Submission Time ' + chart_type)
-
 # Display plot
 st.pyplot(fig)

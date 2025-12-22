@@ -196,7 +196,7 @@ def data_import(collection_list):
 def format_for_streamlit(df):
     """Makes df more readable, converts times into plottable numbers and sets index"""
 
-    df = df[['load_ts', 'time', 'user', 'retro']]
+    df = df[['load_ts', 'time', 'user', 'retro']].copy()
 
     # Makes column to indicate which database times are from
 
@@ -206,7 +206,7 @@ def format_for_streamlit(df):
 
     df['time'] = df['time'].str.replace(r'(^\d\d:\d\d$)', r'00:\1', regex=True)
     df['load_ts'] = pd.to_datetime(df['load_ts'], format='%Y-%m-%d %H:%M:%S.%f')
-    df['user'] = df['user'].str.split(' ', 1).str[0]
+    df['user'] = df['user'].str.split(' ').str[0]
     df = df.sort_values(by=['load_ts'])
     df = df.rename(columns={'load_ts': 'timestamp'})
     df['time_delta'] = pd.to_timedelta(df['time'].astype('timedelta64[ns]'))
@@ -214,8 +214,7 @@ def format_for_streamlit(df):
     df['time_delta_as_num'] = time_delta_to_num(pd.to_timedelta(df['time'].astype('string')))
     df['sub_time_delta_as_num'] = time_delta_to_num(pd.to_timedelta(df['timestamp'].dt.time.astype('string')))
     df['dataset'] = df['dataset'].astype('category')
-    df['retro'] = df['retro'].fillna(False)
-    df['retro'] = df['retro'].astype('bool')
+    df['retro'] = df['retro'].astype('boolean').fillna(False)
 
     df = df.set_index('timestamp')
     df = df.sort_index(ascending=False)
@@ -361,30 +360,28 @@ def number_of_sub_1_minnies(df):
 
 
 def number_of_submissions(df):
-    """ Barplot of how many submissions total for each person"""
+    """Barplot of how many submissions total for each person"""
 
-    # Creates df
-
-    df_overall_number_submissions = df["user"].value_counts(sort=True, ascending=False)
-
-    df_overall_number_submissions = df_overall_number_submissions.reset_index()
-
-    df_overall_number_submissions = df_overall_number_submissions.rename(columns={'user': 'Number of Submissions',
-                                                                                  'index': 'User'})
-    # Plot
+    df_overall_number_submissions = (
+        df["user"]
+        .value_counts(sort=True, ascending=False)
+        .reset_index(name="Number of Submissions")
+        .rename(columns={'user': 'User'})
+    )
 
     fig, ax = plt.subplots(figsize=(10, 5))
 
-    fig = sns.barplot(data=df_overall_number_submissions,
-                      y='Number of Submissions',
-                      x='User'
-                      ).set(
-        ylabel=None,
-        xlabel=None)
+    sns.barplot(
+        data=df_overall_number_submissions,
+        y="Number of Submissions",
+        x="User",
+        ax=ax
+    )
 
+    ax.set(xlabel=None, ylabel=None)
     plt.xticks(rotation=0)
 
-    return df_overall_number_submissions, ax.figure
+    return df_overall_number_submissions, fig
 
 
 def combined_period_mean(df, time_period, smooth, poly_value):
@@ -580,7 +577,7 @@ def sub_time_violin_plot(df):
                          x="user",
                          y=df["sub_time_delta_as_num"],
                          cut=0,
-                         bw=0.25)
+                         bw_method=0.25)
 
     ax.yaxis_date()
 
@@ -609,11 +606,11 @@ def sub_time_distplot(df, user):
 
     plt.xlim(0, 1)
 
-    fig = sns.distplot(df_time_dist,
+    fig = sns.histplot(df_time_dist,
                        x=df_time_dist['sub_time_delta_as_num'],
                        bins=30,
                        kde=True,
-                       color=palette[random.randint(0, 20)]).set(
+                       color=palette[random.randint(0, 19)]).set(
         title=user,
         xlabel='Time of Submission')
 
@@ -635,11 +632,11 @@ def puzzle_difficulty(df, ascending, number_of_rows):
 
     df_difficulty['date'] = df_difficulty.index.date
 
-    df_difficulty = df_difficulty.groupby([df_difficulty['date'], 'dataset'])['time_delta_as_num'].mean()
+    df_difficulty = df_difficulty.groupby([df_difficulty['date'], 'dataset'], observed=False)['time_delta_as_num'].mean()
 
     df_difficulty = df_difficulty.reset_index()
 
-    df_difficulty = df_difficulty.sort_values("time_delta_as_num", ascending=ascending).groupby("dataset").head(
+    df_difficulty = df_difficulty.sort_values("time_delta_as_num", ascending=ascending).groupby("dataset", observed=False).head(
         number_of_rows)
 
     df_difficulty['time'] = mdates.num2timedelta(df_difficulty['time_delta_as_num'])
@@ -814,39 +811,32 @@ def today_times(df):
 
 
 def calculate_streak(df):
-    """Calculates how many days in a row people have submitted a time. Has to do it per used and then concat each dataframe as merge_asof doesn't allow multiple indices"""
-
+    """Calculates how many days in a row people have submitted a time. Has to do it per used and then concat each dataframe as merge_asof doesn't allow multiple indices. Replaced Tom's logic with AI suggestion cba debugging"""
     df_streak = df.copy()
 
-    df_streak['date'] = pd.to_datetime(df_streak.index.date)
+    # Extract date from index
+    df_streak['date'] = df_streak.index.normalize()
 
+    # Keep only needed columns
     df_streak = df_streak[['user', 'date']]
 
-    users = df_streak['user'].unique()
+    # Drop duplicate days per user
+    df_streak = df_streak.sort_values(['user', 'date']).drop_duplicates()
 
-    df_whole = pd.DataFrame()
+    # Compute day gaps
+    df_streak['diff'] = df_streak.groupby('user')['date'].diff().dt.days.fillna(0)
 
-    for user in users:
-        df_each_user = df_streak[df_streak['user'] == user]
+    # Identify streak breaks
+    df_streak['break'] = (df_streak['diff'] > 1).astype(int)
 
-        df_each_user = df_each_user.sort_values('date').drop_duplicates(subset='date')
-        df_each_user['diff'] = df_each_user["date"].diff().dt.days
-        df_each_user['diff'] = df_each_user['diff'].fillna(0)
+    # Assign a streak group ID
+    df_streak['streak_group'] = df_streak.groupby('user')['break'].cumsum()
 
-        df_each_user['streak'] = np.where(df_each_user['diff'] > 1, 0, df_each_user['diff'])
-        streak_break = df_each_user[df_each_user['streak'] == 0]
-        streak_break['streak_start'] = streak_break.index.date
+    # Compute streak length within each group
+    df_streak['streak'] = df_streak.groupby(['user', 'streak_group']).cumcount() + 1
 
-        df_each_user = pd.merge_asof(df_each_user, streak_break['streak_start'],
-                                     left_index=True, right_index=True,
-                                     direction='backward')
-
-        df_each_user['streak'] = (df_each_user['date'].dt.date - df_each_user['streak_start']).dt.days
-        df_each_user['streak'] = df_each_user['streak'] + 1
-        df_each_user = df_each_user.drop(columns=['streak_start', 'date', 'diff'])
-        df_whole = pd.concat([df_whole, df_each_user])
-
-    df_whole = df_whole.sort_values(by=['user'])
+    # Final output
+    df_whole = df_streak[['user', 'streak']]
 
     return df_whole
 

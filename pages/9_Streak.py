@@ -28,9 +28,6 @@ if chart_type == 'Longest Streak':
 else:
     df, fig = current_streak(df)
 
-# Sets title
-st.title(chart_type)
-
 # Display plot
 st.pyplot(fig)
 

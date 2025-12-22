@@ -34,9 +34,6 @@ else:
     agg = 'Max'
     df, fig = overall_times(df, agg)
 
-# Sets title
-st.title('Overall ' + chart_type + ' Times')
-
 # Display plot
 st.pyplot(fig)
 

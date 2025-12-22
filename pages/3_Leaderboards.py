@@ -27,13 +27,8 @@ df = user_multi_select_non_mums(df)
 
 if chart_type == 'Sub Minnies':
     df, fig = number_of_sub_1_minnies(df)
-
 else:
     df, fig = number_of_submissions(df)
-
-
-# Sets title
-st.title(chart_type)
 
 # Display plot
 st.pyplot(fig)
