@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 8501
 
 # Start cron and Gunicorn together
-CMD streamlit run Home.py
+CMD streamlit run Home.py --server.enableCORS false --server.enableXsrfProtection false --server.headless true --server.port 8501 --server.address 0.0.0.0
