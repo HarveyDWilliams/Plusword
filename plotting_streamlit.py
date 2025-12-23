@@ -190,6 +190,17 @@ def data_import(collection_list):
 
     df = pd.DataFrame(all_records)
 
+    aliases = db['Aliases']
+    alias_df = pd.DataFrame(list(aliases.find({}, {"_id": 0})))
+
+    alias_map = dict(zip(alias_df["phone_number"], alias_df["alias"]))
+
+    print(alias_map)
+
+    df['user'] = df['phone_number'].map(alias_map).fillna(df["user"])
+
+    print(df.groupby('phone_number')['phone_number'].count())
+
     return df
 
 
@@ -715,7 +726,7 @@ def user_multi_select_non_mums(df):
     sorted_unique_user = sorted(df['user'].unique())
 
     selected_users = st.sidebar.multiselect('User', sorted_unique_user,
-                                            ['Harvey', 'Sazzle', 'Leah', 'Tom', 'Joe', 'George', 'Oliver'])
+                                            ['Harvey', 'Tom', 'Joe', 'Josh', 'Oli'])
 
     df = df[df['user'].isin(selected_users)]
 
