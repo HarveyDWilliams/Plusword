@@ -726,7 +726,7 @@ def user_multi_select_non_mums(df):
     sorted_unique_user = sorted(df['user'].unique())
 
     selected_users = st.sidebar.multiselect('User', sorted_unique_user,
-                                            ['Harvey', 'Tom', 'Joe', 'Josh', 'Oli'])
+                                            ['Harvey', 'Tom', 'Joe', 'Josh', 'Oli', 'Jenny'])
 
     df = df[df['user'].isin(selected_users)]
 
